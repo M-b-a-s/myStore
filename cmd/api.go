@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github/M-b-a-s/myStore/internal/products"
 	"log"
 	"net/http"
 	"time"
@@ -35,6 +36,11 @@ func (app *application) mount() http.Handler {
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("healthy"))
 	})
+
+	// products endpoint
+	productService := products.NewService()               // Create the service implementation
+	productHandler := products.NewHandler(productService) // Pass the service implementation here
+	r.Get("/products", productHandler.ListProducts)
 
 	return r
 }
