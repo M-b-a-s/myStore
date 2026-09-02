@@ -44,6 +44,7 @@ func (app *application) mount() http.Handler {
 	productService := products.NewService(repo.New(app.db)) // Create the service implementation
 	productHandler := products.NewHandler(productService)   // Pass the service implementation here
 	r.Get("/products", productHandler.ListProducts)
+	r.Post("/products", productHandler.CreateProduct)
 
 	return r
 }
