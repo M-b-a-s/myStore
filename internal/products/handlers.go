@@ -1,6 +1,7 @@
 package products
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github/M-b-a-s/myStore/internal/json"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/jackc/pgx/v5"
 )
 
 type handler struct {
@@ -34,23 +36,19 @@ func (h *handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
-	// 1. Extract the product ID from the request (assuming it's passed as a query parameter)
-	idStr := chi.URLParam(r, "id")
-	if idStr == "" {
-		json.Write(w, http.StatusBadRequest, nil, "Missing product ID")
-		return
-	}
-
-	// Convert the ID to int64
-	id, err := strconv.ParseInt(idStr, 10, 64)
+	id, err := parseProductID(r)
 	if err != nil {
-		json.Write(w, http.StatusBadRequest, nil, "Invalid product ID")
+		json.Write(w, http.StatusBadRequest, nil, err.Error())
 		return
 	}
 
 	// 2. Call the service -> GetProductByID
 	product, err := h.service.GetProductByID(r.Context(), id)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			json.Write(w, http.StatusNotFound, nil, "Product not found")
+			return
+		}
 		log.Printf("Error fetching product: %v", err)
 		json.Write(w, http.StatusInternalServerError, nil, "Error fetching product")
 		return
@@ -77,4 +75,72 @@ func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.Write(w, http.StatusCreated, createdProduct, "Product created successfully")
+}
+
+func (h *handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
+	id, err := parseProductID(r)
+	if err != nil {
+		json.Write(w, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	// 2. Parse the request body into a Product struct
+	var product repo.UpdateProductParams
+	if err := json.Read(r, &product); err != nil {
+		log.Printf("Error reading request body: %v", err)
+		json.Write(w, http.StatusBadRequest, err, "Invalid request body")
+		return
+	}
+	product.ID = id
+
+	// 3. Call the service -> UpdateProduct
+	updatedProduct, err := h.service.UpdateProduct(r.Context(), product)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			json.Write(w, http.StatusNotFound, nil, "Product not found")
+			return
+		}
+		log.Printf("Error updating product: %v", err)
+		json.Write(w, http.StatusInternalServerError, err, "Error updating product")
+		return
+	}
+
+	json.Write(w, http.StatusOK, updatedProduct, "Product updated successfully")
+}
+
+func (h *handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract the product ID from the request
+	id, err := parseProductID(r)
+	if err != nil {
+		json.Write(w, http.StatusBadRequest, nil, err.Error())
+		return
+	}
+
+	// 2. Call the service -> DeleteProduct
+	deletedProduct, err := h.service.DeleteProduct(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			json.Write(w, http.StatusNotFound, nil, "Product not found")
+			return
+		}
+		log.Printf("Error deleting product: %v", err)
+		json.Write(w, http.StatusInternalServerError, err, "Error deleting product")
+		return
+	}
+
+	json.Write(w, http.StatusOK, deletedProduct, "Product deleted successfully")
+}
+
+func parseProductID(r *http.Request) (int64, error) {
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		return 0, errors.New("missing product ID")
+	}
+
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil || id < 1 {
+		return 0, errors.New("invalid product ID")
+	}
+
+	return id, nil
 }

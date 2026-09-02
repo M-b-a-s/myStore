@@ -9,6 +9,8 @@ type Service interface {
 	ListProducts(ctx context.Context) ([]repo.Product, error)
 	GetProductByID(ctx context.Context, id int64) (repo.Product, error)
 	CreateProduct(ctx context.Context, input repo.CreateProductParams) (repo.Product, error)
+	UpdateProduct(ctx context.Context, input repo.UpdateProductParams) (repo.Product, error)
+	DeleteProduct(ctx context.Context, id int64) (repo.Product, error)
 }
 
 type svc struct {
@@ -38,4 +40,12 @@ func (s *svc) GetProductByID(ctx context.Context, id int64) (repo.Product, error
 
 func (s *svc) CreateProduct(ctx context.Context, input repo.CreateProductParams) (repo.Product, error) {
 	return s.repo.CreateProduct(ctx, input)
+}
+
+func (s *svc) UpdateProduct(ctx context.Context, input repo.UpdateProductParams) (repo.Product, error) {
+	return s.repo.UpdateProduct(ctx, input)
+}
+
+func (s *svc) DeleteProduct(ctx context.Context, id int64) (repo.Product, error) {
+	return s.repo.DeleteProduct(ctx, id)
 }
