@@ -19,18 +19,6 @@ type handler struct {
 	service Service
 }
 
-type createProductRequest struct {
-	Name         string `json:"name"`
-	PriceInCents int32  `json:"price_in_cents"`
-	Quantity     int32  `json:"quantity"`
-}
-
-type updateProductRequest struct {
-	Name         string `json:"name"`
-	PriceInCents int32  `json:"price_in_cents"`
-	Quantity     int32  `json:"quantity"`
-}
-
 func validateProductInput(name string, priceInCents, quantity int32) error {
 	if strings.TrimSpace(name) == "" {
 		return errors.New("product name is required")
