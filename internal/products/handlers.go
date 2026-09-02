@@ -117,7 +117,7 @@ func (h *handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 2. Call the service -> DeleteProduct
-	deletedProduct, err := h.service.DeleteProduct(r.Context(), id)
+	_, err = h.service.DeleteProduct(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			json.Write(w, http.StatusNotFound, nil, "Product not found")
@@ -128,7 +128,7 @@ func (h *handler) DeleteProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	json.Write(w, http.StatusOK, deletedProduct, "Product deleted successfully")
+	w.WriteHeader(http.StatusNoContent)
 }
 
 func parseProductID(r *http.Request) (int64, error) {
