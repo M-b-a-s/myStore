@@ -2,9 +2,11 @@ package products
 
 import (
 	"errors"
+	"io"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	repo "github/M-b-a-s/myStore/internal/adapters/postgresql/sqlc"
 	"github/M-b-a-s/myStore/internal/json"
@@ -15,6 +17,32 @@ import (
 
 type handler struct {
 	service Service
+}
+
+type createProductRequest struct {
+	Name         string `json:"name"`
+	PriceInCents int32  `json:"price_in_cents"`
+	Quantity     int32  `json:"quantity"`
+}
+
+type updateProductRequest struct {
+	Name         string `json:"name"`
+	PriceInCents int32  `json:"price_in_cents"`
+	Quantity     int32  `json:"quantity"`
+}
+
+func validateProductInput(name string, priceInCents, quantity int32) error {
+	if strings.TrimSpace(name) == "" {
+		return errors.New("product name is required")
+	}
+	if priceInCents < 0 {
+		return errors.New("price_in_cents must not be negative")
+	}
+	if quantity < 0 {
+		return errors.New("quantity must not be negative")
+	}
+
+	return nil
 }
 
 func NewHandler(s Service) *handler {
@@ -58,16 +86,27 @@ func (h *handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
-	// 1. Parse the request body into a Product struct
-	var product repo.CreateProductParams
-	if err := json.Read(r, &product); err != nil {
+	var input createProductRequest
+	if err := json.Read(r, &input); err != nil {
+		if errors.Is(err, io.EOF) {
+			json.Write(w, http.StatusBadRequest, nil, "Request body is required")
+			return
+		}
 		log.Printf("Error reading request body: %v", err)
-		json.Write(w, http.StatusBadRequest, err, "Invalid request body")
+		json.Write(w, http.StatusBadRequest, nil, "Invalid request body")
+		return
+	}
+	if err := validateProductInput(input.Name, input.PriceInCents, input.Quantity); err != nil {
+		json.Write(w, http.StatusBadRequest, nil, err.Error())
 		return
 	}
 
 	// 2. Call the service -> CreateProduct
-	createdProduct, err := h.service.CreateProduct(r.Context(), product)
+	createdProduct, err := h.service.CreateProduct(r.Context(), repo.CreateProductParams{
+		Name:         input.Name,
+		PriceInCents: input.PriceInCents,
+		Quantity:     input.Quantity,
+	})
 	if err != nil {
 		log.Printf("Error creating product: %v", err)
 		json.Write(w, http.StatusInternalServerError, err, "Error creating product")
@@ -84,17 +123,28 @@ func (h *handler) UpdateProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 2. Parse the request body into a Product struct
-	var product repo.UpdateProductParams
-	if err := json.Read(r, &product); err != nil {
+	var input updateProductRequest
+	if err := json.Read(r, &input); err != nil {
+		if errors.Is(err, io.EOF) {
+			json.Write(w, http.StatusBadRequest, nil, "Request body is required")
+			return
+		}
 		log.Printf("Error reading request body: %v", err)
-		json.Write(w, http.StatusBadRequest, err, "Invalid request body")
+		json.Write(w, http.StatusBadRequest, nil, "Invalid request body")
 		return
 	}
-	product.ID = id
+	if err := validateProductInput(input.Name, input.PriceInCents, input.Quantity); err != nil {
+		json.Write(w, http.StatusBadRequest, nil, err.Error())
+		return
+	}
 
 	// 3. Call the service -> UpdateProduct
-	updatedProduct, err := h.service.UpdateProduct(r.Context(), product)
+	updatedProduct, err := h.service.UpdateProduct(r.Context(), repo.UpdateProductParams{
+		ID:           id,
+		Name:         input.Name,
+		PriceInCents: input.PriceInCents,
+		Quantity:     input.Quantity,
+	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			json.Write(w, http.StatusNotFound, nil, "Product not found")
