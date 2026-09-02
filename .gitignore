@@ -29,3 +29,6 @@ go.work
 # Build output
 /bin/
 /dist/
+
+# Environment files
+.env
