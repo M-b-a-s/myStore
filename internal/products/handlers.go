@@ -3,9 +3,12 @@ package products
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	repo "github/M-b-a-s/myStore/internal/adapters/postgresql/sqlc"
 	"github/M-b-a-s/myStore/internal/json"
+
+	"github.com/go-chi/chi/v5"
 )
 
 type handler struct {
@@ -28,6 +31,32 @@ func (h *handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	json.Write(w, http.StatusOK, products, "Products listed successfully")
+}
+
+func (h *handler) GetProductByID(w http.ResponseWriter, r *http.Request) {
+	// 1. Extract the product ID from the request (assuming it's passed as a query parameter)
+	idStr := chi.URLParam(r, "id")
+	if idStr == "" {
+		json.Write(w, http.StatusBadRequest, nil, "Missing product ID")
+		return
+	}
+
+	// Convert the ID to int64
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		json.Write(w, http.StatusBadRequest, nil, "Invalid product ID")
+		return
+	}
+
+	// 2. Call the service -> GetProductByID
+	product, err := h.service.GetProductByID(r.Context(), id)
+	if err != nil {
+		log.Printf("Error fetching product: %v", err)
+		json.Write(w, http.StatusInternalServerError, nil, "Error fetching product")
+		return
+	}
+
+	json.Write(w, http.StatusOK, product, "Product fetched successfully")
 }
 
 func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
