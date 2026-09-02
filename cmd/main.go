@@ -42,6 +42,7 @@ func main() {
 
 	api := application{
 		config: cfg,
+		db:     conn,
 	}
 
 	handler := api.mount()

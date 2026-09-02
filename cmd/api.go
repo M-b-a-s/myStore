@@ -1,6 +1,7 @@
 package main
 
 import (
+	repo "github/M-b-a-s/myStore/internal/adapters/postgresql/sqlc"
 	"github/M-b-a-s/myStore/internal/products"
 	"log"
 	"net/http"
@@ -8,12 +9,14 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jackc/pgx/v5"
 )
 
 type application struct {
 	config config
 	// logger
 	// db driver
+	db *pgx.Conn
 }
 
 // mount
@@ -37,9 +40,9 @@ func (app *application) mount() http.Handler {
 		w.Write([]byte("healthy"))
 	})
 
-	// products endpoint
-	productService := products.NewService()               // Create the service implementation
-	productHandler := products.NewHandler(productService) // Pass the service implementation here
+	// products
+	productService := products.NewService(repo.New(app.db)) // Create the service implementation
+	productHandler := products.NewHandler(productService)   // Pass the service implementation here
 	r.Get("/products", productHandler.ListProducts)
 
 	return r
