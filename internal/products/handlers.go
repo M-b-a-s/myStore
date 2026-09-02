@@ -23,11 +23,11 @@ func (h *handler) ListProducts(w http.ResponseWriter, r *http.Request) {
 	products, err := h.service.ListProducts(r.Context())
 	if err != nil {
 		log.Printf("Error listing products: %v", err)
-		json.Write(w, http.StatusInternalServerError, err)
+		json.Write(w, http.StatusInternalServerError, err, "Error listing products")
 		return
 	}
 
-	json.Write(w, http.StatusOK, products)
+	json.Write(w, http.StatusOK, products, "Products listed successfully")
 }
 
 func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +35,7 @@ func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	var product repo.CreateProductParams
 	if err := json.Read(r, &product); err != nil {
 		log.Printf("Error reading request body: %v", err)
-		json.Write(w, http.StatusBadRequest, err)
+		json.Write(w, http.StatusBadRequest, err, "Invalid request body")
 		return
 	}
 
@@ -43,9 +43,9 @@ func (h *handler) CreateProduct(w http.ResponseWriter, r *http.Request) {
 	createdProduct, err := h.service.CreateProduct(r.Context(), product)
 	if err != nil {
 		log.Printf("Error creating product: %v", err)
-		json.Write(w, http.StatusInternalServerError, err)
+		json.Write(w, http.StatusInternalServerError, err, "Error creating product")
 		return
 	}
 
-	json.Write(w, http.StatusCreated, createdProduct)
+	json.Write(w, http.StatusCreated, createdProduct, "Product created successfully")
 }
